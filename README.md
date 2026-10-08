@@ -1,12 +1,48 @@
 mattermost4j
 ============
 
-![CI Status](https://github.com/maruTA-bis5/mattermost4j/workflows/CI/badge.svg)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/net.bis5.mattermost4j/mattermost4j-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/net.bis5.mattermost4j/mattermost4j-core)
-[![Javadocs](http://javadoc.io/badge/net.bis5.mattermost4j/mattermost4j-core.svg)](http://javadoc.io/doc/net.bis5.mattermost4j/mattermost4j-core)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=net.bis5.mattermost4j%3Amattermost4j-parent&metric=coverage)](https://sonarcloud.io/dashboard?id=net.bis5.mattermost4j%3Amattermost4j-parent)
+[![CI Status](https://github.com/ug23/mattermost4j/actions/workflows/ci.yml/badge.svg)](https://github.com/ug23/mattermost4j/actions/workflows/ci.yml)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.ug23/mattermost4j-core)](https://central.sonatype.com/artifact/io.github.ug23/mattermost4j-core)
+[![Javadocs](https://javadoc.io/badge2/io.github.ug23/mattermost4j-core/javadoc.svg)](https://javadoc.io/doc/io.github.ug23/mattermost4j-core)
 
 Mattermost API v4 client for Java.
+
+## About this fork
+
+This repository is a fork of [maruTA-bis5/mattermost4j](https://github.com/maruTA-bis5/mattermost4j), published to Maven Central under the `io.github.ug23` group ID.
+
+**Why this fork exists.**
+The upstream project has not been maintained since January 2023.
+Its last 0.x release, 0.25.0, fails with `java.lang.NoSuchFieldError` when it runs with Jackson 2.20 or later, because it refers to `PropertyNamingStrategy` constants that Jackson 2.20 removed.
+Applications hit this as soon as their dependency management upgrades Jackson, for example with Spring Boot 3.5.13 or later.
+
+**Policy.**
+
+- This fork is maintained on an ongoing basis, starting from the upstream 0.25.0 release.
+- Issues and pull requests are welcome in [ug23/mattermost4j](https://github.com/ug23/mattermost4j).
+- The fix is also proposed to upstream as a backport pull request ([maruTA-bis5/mattermost4j#541](https://github.com/maruTA-bis5/mattermost4j/pull/541)).
+
+**New coordinates.**
+Replace the `net.bis5.mattermost4j` group ID with `io.github.ug23`.
+The artifact IDs and the Java package names (`net.bis5.mattermost.*`) are unchanged.
+
+Apache Maven:
+
+```xml
+<dependency>
+	<groupId>io.github.ug23</groupId>
+	<artifactId>mattermost4j-core</artifactId>
+	<version>0.25.1</version>
+</dependency>
+```
+
+Gradle:
+
+```groovy
+implementation 'io.github.ug23:mattermost4j-core:0.25.1'
+```
+
+See [CHANGELOG.md](CHANGELOG.md) for the changes since the upstream 0.25.0 release.
 
 ## Requirement
 - JDK 8 or 11
@@ -53,19 +89,19 @@ client.postByIncomingWebhook(payload);
 ### Apache Maven:
 ```xml
 <dependency>
-	<groupId>net.bis5.mattermost4j</groupId>
+	<groupId>io.github.ug23</groupId>
 	<artifactId>mattermost4j-core</artifactId>
-	<version>0.25.0</version>
+	<version>0.25.1</version>
 </dependency>
 ```
 
 ### Gradle:
 ```
-compile 'net.bis5.mattermost4j:mattermost4j-core:0.25.0'
+implementation 'io.github.ug23:mattermost4j-core:0.25.1'
 ```
 
 ## Contribution
-1. Fork it ( https://github.com/maruTA-bis5/mattermost4j/fork )
+1. Fork it ( https://github.com/ug23/mattermost4j/fork )
 2. Create your feature branch (git checkout -b my-new-feature)
 3. Commit your changes (git commit -am 'Add some feature')
 4. Push to the branch (git push origin my-new-feature)
@@ -85,10 +121,10 @@ Currently, use CheckStyle's built-in `google_checks.xml`.
 1. `docker-compose up`
 2. `mvn verify`
 
+See [docs/RELEASING.md](docs/RELEASING.md) for the exact commands, including the workaround for Apple Silicon.
+
 ## Contact
-- Create GitHub Issue (https://github.com/maruTA-bis5/primefaces-excella-exporter/issues/new)
-- or Start new Discussion (https://github.com/maruTA-bis5/primefaces-excella-exporter/discussions/new)
-- or DM me on the Mattermost Community Server (https://community.mattermost.com/core/messages/@maruta-bis5)
+- Create GitHub Issue (https://github.com/ug23/mattermost4j/issues/new)
 
 ## License
 [Apache Software License, Version 2.0](LICENSE.txt)
