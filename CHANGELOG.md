@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project is a fork of [maruTA-bis5/mattermost4j](https://github.com/maruTA-bis5/mattermost4j), which has not been maintained since January 2023.
 For the history up to 0.25.0, see the [upstream repository](https://github.com/maruTA-bis5/mattermost4j/releases).
 
-## [0.25.1] - Unreleased
+## [0.25.1] - 2026-10-08
 
 The first release of this fork, based on the upstream [v0.25.0](https://github.com/maruTA-bis5/mattermost4j/tree/v0.25.0) release.
 
