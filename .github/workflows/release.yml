@@ -1,0 +1,124 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: >-
+          Only build the Central bundle and store it as a workflow artifact
+          (no signing, no upload, no secrets needed)
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      # 'true' only for a manual run with dry_run checked; tag pushes always publish.
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+    steps:
+      - name: Refuse to publish from a branch
+        if: env.DRY_RUN != 'true' && github.ref_type != 'tag'
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          echo "::error::Publishing requires a v* tag, but this run is on the ${REF_NAME} branch. Run it on a tag or check dry_run."
+          exit 1
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: maven
+          server-id: central
+          server-username-env-var: CENTRAL_USERNAME
+          server-password-env-var: CENTRAL_TOKEN
+          # No key is imported for a dry run, so it works without any secret.
+          gpg-private-key: ${{ env.DRY_RUN != 'true' && secrets.GPG_PRIVATE_KEY || '' }}
+          gpg-passphrase-env-var: MAVEN_GPG_PASSPHRASE
+      - name: Verify that the tag matches the project version
+        if: env.DRY_RUN != 'true'
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          project_version="$(mvn -B help:evaluate -Dexpression=project.version -q -DforceStdout)"
+          if [ "${TAG_NAME}" != "v${project_version}" ]; then
+            echo "::error::Tag ${TAG_NAME} does not match project version v${project_version}"
+            exit 1
+          fi
+          echo "Releasing version ${project_version}"
+      - name: Extract release notes from CHANGELOG.md
+        if: env.DRY_RUN != 'true' && github.ref_type == 'tag'
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          notes_file="${RUNNER_TEMP}/release-notes.md"
+          # Extract the "## [x.y.z]" section of CHANGELOG.md up to the next
+          # "## [" heading or the link reference definitions at the end.
+          awk -v ver="${TAG_NAME#v}" '
+            index($0, "## [" ver "]") == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found && /^\[[^]]*\]: / { exit }
+            found { print }
+          ' CHANGELOG.md > "${notes_file}"
+          if ! grep -q '[^[:space:]]' "${notes_file}"; then
+            echo "::error::CHANGELOG.md has no section for ${TAG_NAME#v}"
+            exit 1
+          fi
+      - name: Build the Central bundle (dry run)
+        if: env.DRY_RUN == 'true'
+        env:
+          # Placeholder credentials: the plugin requires the server entry but
+          # never uses it because the upload goes to an unreachable address.
+          CENTRAL_USERNAME: dry-run
+          CENTRAL_TOKEN: dry-run
+        run: |
+          # central-publishing-maven-plugin 0.11.0 applies -DskipPublishing=true
+          # per module, so nothing is staged and no bundle is created. Instead,
+          # point the upload at an unreachable address: the bundle is written
+          # to target/central-publishing/ and then the upload fails as expected.
+          set +e
+          mvn -B -P release -DskipITs -Dgpg.skip \
+            -DcentralBaseUrl=http://127.0.0.1:1 deploy 2>&1 | tee "${RUNNER_TEMP}/deploy.log"
+          set -e
+          if [ ! -s target/central-publishing/central-bundle.zip ]; then
+            echo "::error::target/central-publishing/central-bundle.zip was not created"
+            exit 1
+          fi
+          if ! grep -q 'Unable to upload bundle for deployment' "${RUNNER_TEMP}/deploy.log"; then
+            echo "::error::The build failed before the upload step"
+            exit 1
+          fi
+          unzip -l target/central-publishing/central-bundle.zip
+      - name: Upload the Central bundle
+        if: env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: central-bundle
+          path: target/central-publishing/central-bundle.zip
+          if-no-files-found: error
+      - name: Deploy to Maven Central (stops at validated)
+        if: env.DRY_RUN != 'true' && github.ref_type == 'tag'
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_TOKEN: ${{ secrets.CENTRAL_TOKEN }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: mvn -B -P release -DskipITs deploy
+      - name: Create GitHub Release
+        if: env.DRY_RUN != 'true' && github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: gh release create "${TAG_NAME}" --verify-tag --title "${TAG_NAME}" --notes-file "${RUNNER_TEMP}/release-notes.md"

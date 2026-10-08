@@ -1,12 +1,12 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" child.project.url.inherit.append.path="false">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>net.bis5.mattermost4j</groupId>
+	<groupId>io.github.ug23</groupId>
 	<artifactId>mattermost4j-parent</artifactId>
-	<version>0.25.0</version>
+	<version>0.25.1</version>
 	<packaging>pom</packaging>
 	<name>Mattermost4J Parent POM</name>
-	<url>https://github.com/maruTA-bis5/mattermost4j</url>
-	<description>Mattermost API client for Java</description>
+	<url>https://github.com/ug23/mattermost4j</url>
+	<description>Mattermost API client for Java (fork of maruTA-bis5/mattermost4j with Jackson 2.20+ support)</description>
 	<modules>
 		<module>mattermost4j-core</module>
 		<module>mattermost-models</module>
@@ -18,12 +18,12 @@
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
-	<scm>
-		<url>https://github.com/maruTA-bis5/mattermost4j</url>
-		<connection>scm:git:git://github.com/maruTA-bis5/mattermost4j.git</connection>
-		<developerConnection>scm:git:git@github.com:maruTA-bis5/mattermost4j.git</developerConnection>
-	  <tag>v0.25.0</tag>
-  </scm>
+	<scm child.scm.connection.inherit.append.path="false" child.scm.developerConnection.inherit.append.path="false" child.scm.url.inherit.append.path="false">
+		<url>https://github.com/ug23/mattermost4j</url>
+		<connection>scm:git:https://github.com/ug23/mattermost4j.git</connection>
+		<developerConnection>scm:git:git@github.com:ug23/mattermost4j.git</developerConnection>
+		<tag>v0.25.1</tag>
+	</scm>
 	<developers>
 		<developer>
 			<id>maruTA-bis5</id>
@@ -31,30 +31,29 @@
 			<email>bis5.wsys@gmail.com</email>
 			<url>http://entrance.bis5.net</url>
 			<timezone>+9</timezone>
+			<roles>
+				<role>Original author</role>
+			</roles>
+		</developer>
+		<developer>
+			<id>ug23</id>
+			<name>Yuji Imagawa</name>
+			<url>https://github.com/ug23</url>
+			<roles>
+				<role>Fork maintainer</role>
+			</roles>
 		</developer>
 	</developers>
 	<issueManagement>
 		<system>GitHub</system>
-		<url>https://github.com/maruTA-bis5/mattermost4j/issues</url>
+		<url>https://github.com/ug23/mattermost4j/issues</url>
 	</issueManagement>
-	<distributionManagement>
-		<repository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-		</repository>
-		<snapshotRepository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
-	</distributionManagement>
 
 	<properties>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<jackson.version>2.13.3</jackson.version>
-		<sonar.java.spotbugs.reportPaths>${project.build.directory}/spotbugsXml.xml</sonar.java.spotbugs.reportPaths>
-		<sonar.junit.reportPaths>${project.build.directory}/surefire-reports,${project.build.directory}/failsafe-reports</sonar.junit.reportPaths>
 	</properties>
 
 	<profiles>
@@ -65,12 +64,9 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-gpg-plugin</artifactId>
-						<version>3.0.1</version>
+						<version>3.2.8</version>
 						<configuration>
-							<gpgArguments>
-								<arg>--pinentry-mode</arg>
-								<arg>loopback</arg>
-							</gpgArguments>
+							<bestPractices>true</bestPractices>
 						</configuration>
 						<executions>
 							<execution>
@@ -125,20 +121,6 @@
 						</goals>
 					</execution>
 				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-release-plugin</artifactId>
-				<version>2.5.3</version>
-				<configuration>
-					<tagNameFormat>v@{project.version}</tagNameFormat>
-					<releaseProfiles>release</releaseProfiles>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-deploy-plugin</artifactId>
-				<version>2.8.2</version>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -201,14 +183,15 @@
 				</executions>
 			</plugin>
 			<plugin>
-				<groupId>org.sonatype.plugins</groupId>
-				<artifactId>nexus-staging-maven-plugin</artifactId>
-				<version>1.6.12</version>
+				<groupId>org.sonatype.central</groupId>
+				<artifactId>central-publishing-maven-plugin</artifactId>
+				<version>0.11.0</version>
 				<extensions>true</extensions>
 				<configuration>
-					<nexusUrl>https://oss.sonatype.org</nexusUrl>
-					<serverId>ossrh</serverId>
-					<autoReleaseAfterClose>true</autoReleaseAfterClose>
+					<publishingServerId>central</publishingServerId>
+					<autoPublish>false</autoPublish>
+					<waitUntil>validated</waitUntil>
+					<deploymentName>${project.groupId}:${project.artifactId}:${project.version}</deploymentName>
 				</configuration>
 			</plugin>
 		</plugins>
