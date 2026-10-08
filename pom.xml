@@ -61,6 +61,31 @@
 			<id>release</id>
 			<build>
 				<plugins>
+					<!-- central-publishing-maven-plugin 0.11.0 builds a bundle that the
+					     Central Portal rejects when run with Maven 3.10: the staging
+					     repository gets maven-metadata-local.xml and _remote.repositories
+					     files. Remove this rule once a plugin release supports Maven 3.10. -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-enforcer-plugin</artifactId>
+						<version>3.6.3</version>
+						<executions>
+							<execution>
+								<id>require-maven-3.9-for-central</id>
+								<goals>
+									<goal>enforce</goal>
+								</goals>
+								<configuration>
+									<rules>
+										<requireMavenVersion>
+											<version>(,3.10.0-alpha-1)</version>
+											<message>Releases must be built with Maven 3.9.x: central-publishing-maven-plugin 0.11.0 creates a bundle that the Central Portal rejects with Maven 3.10 or later. See docs/RELEASING.md.</message>
+										</requireMavenVersion>
+									</rules>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-gpg-plugin</artifactId>

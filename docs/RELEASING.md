@@ -5,6 +5,29 @@ Releases go through the [Sonatype Central Portal](https://central.sonatype.com/)
 The release workflow (`.github/workflows/release.yml`) uploads a deployment and stops at the `VALIDATED` state.
 A maintainer then publishes it manually from the Portal.
 
+## Maven version
+
+Build releases with Maven 3.9.x.
+`central-publishing-maven-plugin` 0.11.0 creates a bundle that the Central Portal rejects when it runs on Maven 3.10.
+Maven 3.10 stages the artifacts through its regular local repository manager, so the staging repository gets `maven-metadata-local.xml` and `_remote.repositories` files.
+The plugin copies them into the bundle, and the Portal fails the deployment with `Bundle has content that does NOT have a .pom file`.
+Maven 3.9 writes `maven-metadata-central-staging.xml` instead, and the plugin deletes it before bundling.
+
+- The release workflow downloads Maven 3.9.16 from Maven Central and checks its SHA-512 checksum, because `ubuntu-latest` ships Maven 3.10.
+- The `release` profile runs `maven-enforcer-plugin` and fails the build on Maven 3.10 or later.
+
+To use Maven 3.9.16 on a local machine (for example, the Homebrew `maven` formula installs 3.10), download it into a working directory:
+
+```sh
+curl -fsSLO https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.16/apache-maven-3.9.16-bin.tar.gz
+echo "831a8591fe20c8243b1dbe7d71e3244f31d1665b0804b2e825e38cbbe5ce0cafb8338851f90780735568773e0a6cd07bbec107cda0b896b008b861075358b6f6  apache-maven-3.9.16-bin.tar.gz" | shasum -a 512 -c -
+tar -xzf apache-maven-3.9.16-bin.tar.gz
+export PATH="$PWD/apache-maven-3.9.16/bin:$PATH"
+mvn -v
+```
+
+When a plugin release supports Maven 3.10, update the plugin and remove the Maven 3.9 step of the workflow and the enforcer rule of the `release` profile.
+
 ## One-time setup
 
 ### Central Portal account and namespace
@@ -99,7 +122,7 @@ The example below releases 0.25.1 from the `release/0.25.x` branch.
    git push origin v0.25.1
    ```
 
-7. The release workflow (`release.yml`) runs the unit tests, signs the artifacts, uploads the bundle to the Central Portal and waits until the deployment is `VALIDATED`.
+7. The release workflow (`release.yml`) sets up Maven 3.9.16, runs the unit tests, signs the artifacts, uploads the bundle to the Central Portal and waits until the deployment is `VALIDATED`.
    It then creates a GitHub Release for the tag with the `CHANGELOG.md` section as the notes.
 8. Open <https://central.sonatype.com/publishing/deployments> and check the deployment.
    It must contain `mattermost4j-parent`, `mattermost-models` and `mattermost4j-core` under `io/github/ug23`, each with its signatures and checksums.
@@ -115,6 +138,7 @@ The release workflow can be started manually from the **Actions** tab (**Release
 When `dry_run` is checked (the default), the workflow builds the bundle without signing and stores `central-bundle.zip` as a workflow artifact.
 It needs no secrets, does not upload anything and does not create a GitHub Release.
 Use it to check the CI wiring and the bundle content before tagging.
+The dry run fails when a directory in the bundle has no `.pom` file, which the Central Portal would reject.
 
 If `dry_run` is unchecked, the workflow behaves in the same way as a tag push.
 In that case, select the release tag in **Use workflow from**.
@@ -128,6 +152,7 @@ The workflow refuses to publish from a branch and fails with an error message.
 As a result, nothing is staged and no bundle is created when it is set for the whole build.
 To inspect the bundle locally, point the upload at an unreachable address instead.
 The plugin writes the bundle first and then fails at the upload step, which is expected here.
+Use Maven 3.9.x (see [Maven version](#maven-version)).
 
 The plugin also requires a `central` server entry in the Maven settings even when it does not upload anything.
 Use a settings file with placeholder credentials (do not put real credentials here):
@@ -154,7 +179,14 @@ unzip -l target/central-publishing/central-bundle.zip
 
 The bundle must contain the POM files of the three modules and the jar, sources jar and javadoc jar of `mattermost-models` and `mattermost4j-core`, with `.md5` and `.sha1` checksums, under `io/github/ug23/`.
 `.asc` signatures are missing because of `-Dgpg.skip`.
-The plugin also adds `.sha256` and `.sha512` checksums, and copies the `_remote.repositories` and `maven-metadata-local.xml` files of its staging repository into the bundle.
+The plugin also adds `.sha256` and `.sha512` checksums.
+Every directory must contain a `.pom` file.
+The bundle must not contain `maven-metadata-*.xml` or `_remote.repositories` files, because the Central Portal rejects them.
+The following command prints nothing for a valid bundle:
+
+```sh
+unzip -Z1 target/central-publishing/central-bundle.zip | grep -E 'maven-metadata|_remote\.repositories'
+```
 
 ### Integration tests
 
@@ -188,7 +220,7 @@ Use this only when the release workflow cannot be used.
    ```
 
 2. Import the GPG key into the local keyring (or use the key you created above).
-3. Pass the GPG passphrase in the `MAVEN_GPG_PASSPHRASE` environment variable and deploy.
+3. Pass the GPG passphrase in the `MAVEN_GPG_PASSPHRASE` environment variable and deploy with Maven 3.9.x (see [Maven version](#maven-version)).
 
    ```sh
    read -rs MAVEN_GPG_PASSPHRASE && export MAVEN_GPG_PASSPHRASE
